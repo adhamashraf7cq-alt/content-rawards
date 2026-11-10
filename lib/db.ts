@@ -6,7 +6,9 @@ import fs from 'fs';
 import path from 'path';
 import { Project, Video, Clip, AITask } from '@/types';
 
-const DATA_DIR = path.join(process.cwd(), '.data');
+const DATA_DIR = process.env.VERCEL
+  ? '/tmp/.data'
+  : path.join(process.cwd(), '.data');
 
 function ensureDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
