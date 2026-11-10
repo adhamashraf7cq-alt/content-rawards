@@ -2,21 +2,11 @@ import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
 import { mkdir } from 'fs/promises';
 
-// Use system ffmpeg on Linux (Vercel) or installed binary on Windows
-function setFfmpegPath() {
-  if (process.platform === 'win32') {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const installer = require('@ffmpeg-installer/ffmpeg');
-      ffmpeg.setFfmpegPath(installer.path);
-    } catch {
-      // fall through to system ffmpeg
-    }
-  }
-  // On Linux/Vercel: ffmpeg is available in PATH by default
+// On Vercel (Linux): ffmpeg is available in PATH
+// On Windows dev: set FFMPEG_PATH in .env.local to your ffmpeg binary
+if (process.env.FFMPEG_PATH) {
+  ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
 }
-
-setFfmpegPath();
 
 const EXPORTS_DIR = path.join(process.cwd(), 'uploads', 'exports');
 
