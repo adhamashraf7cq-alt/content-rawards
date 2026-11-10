@@ -1,0 +1,16 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "functions": {
+    "app/api/videos/upload/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/videos/analyze/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/clips/export/route.ts": {
+      "maxDuration": 300
+    }
+  }
+}
