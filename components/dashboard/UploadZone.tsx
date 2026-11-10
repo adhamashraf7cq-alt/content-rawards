@@ -2,7 +2,7 @@
 import { useRef, useState, useEffect, DragEvent } from 'react';
 import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
-import { extractYouTubeId, ACCEPTED_VIDEO_TYPES, formatFileSize } from '@/lib/utils';
+import { extractYouTubeId, ACCEPTED_VIDEO_TYPES } from '@/lib/utils';
 import { Video } from '@/types';
 
 interface Props {
@@ -74,18 +74,51 @@ export function UploadZone({ onVideoCreated }: Props) {
     setProgress(5);
     setStatusLabel('Uploading…');
 
-    const form = new FormData();
-    form.append('file', file);
-
-    // Show upload progress using XHR (fetch doesn't support upload progress)
     try {
-      const video = await uploadWithProgress(form, (pct) => {
-        setProgress(Math.round(pct * 0.65)); // upload = 0–65%
-        setStatusLabel(pct < 100 ? `Uploading… ${Math.round(pct)}%` : 'Processing…');
-      });
-      setProgress(70);
+      // Try Vercel Blob client upload first (bypasses 4.5MB server limit)
+      let video: Video;
+      if (typeof window !== 'undefined') {
+        try {
+          const { upload: blobUpload } = await import('@vercel/blob/client');
+          const ext = file.name.split('.').pop() ?? 'mp4';
+          const blob = await blobUpload(`videos/${Date.now()}.${ext}`, file, {
+            access: 'public',
+            handleUploadUrl: '/api/videos/upload-url',
+            onUploadProgress: ({ percentage }) => {
+              setProgress(Math.round(percentage * 0.8));
+              setStatusLabel(`Uploading… ${Math.round(percentage)}%`);
+            },
+          });
+          setProgress(85);
+          setStatusLabel('Creating project…');
+          // Register video via upload API
+          const form = new FormData();
+          form.append('blobUrl', blob.url);
+          form.append('fileName', file.name);
+          form.append('fileSize', String(file.size));
+          const res = await fetch('/api/videos/upload', { method: 'POST', body: form });
+          const data = await res.json();
+          video = data.video as Video;
+        } catch {
+          // Fallback to direct upload for small files
+          const form = new FormData();
+          form.append('file', file);
+          video = await uploadWithProgress(form, (pct) => {
+            setProgress(Math.round(pct * 0.65));
+            setStatusLabel(`Uploading… ${Math.round(pct)}%`);
+          });
+        }
+      } else {
+        const form = new FormData();
+        form.append('file', file);
+        video = await uploadWithProgress(form, (pct) => {
+          setProgress(Math.round(pct * 0.65));
+        });
+      }
+
+      setProgress(90);
       setStatusLabel('Processing…');
-      setPollingId(video.id); // start polling
+      setPollingId(video.id);
     } catch (err: unknown) {
       setUploading(false);
       setError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
