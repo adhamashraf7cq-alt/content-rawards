@@ -4,8 +4,8 @@ import path from 'path';
 import { createVideo, updateVideo, createProject, getProjects } from '@/lib/db';
 import { generateId, extractYouTubeId, getThumbnailUrl, MAX_FILE_SIZE } from '@/lib/utils';
 
-// Allow up to 10 minutes for very large file uploads
-export const maxDuration = 600;
+// Max 300s on Vercel Hobby plan
+export const maxDuration = 300;
 
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
 
