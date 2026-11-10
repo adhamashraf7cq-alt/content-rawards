@@ -1,10 +1,22 @@
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
 import { mkdir } from 'fs/promises';
 
-// Point fluent-ffmpeg at the bundled binary
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+// Use system ffmpeg on Linux (Vercel) or installed binary on Windows
+function setFfmpegPath() {
+  if (process.platform === 'win32') {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const installer = require('@ffmpeg-installer/ffmpeg');
+      ffmpeg.setFfmpegPath(installer.path);
+    } catch {
+      // fall through to system ffmpeg
+    }
+  }
+  // On Linux/Vercel: ffmpeg is available in PATH by default
+}
+
+setFfmpegPath();
 
 const EXPORTS_DIR = path.join(process.cwd(), 'uploads', 'exports');
 
@@ -13,10 +25,10 @@ export async function ensureExportsDir() {
 }
 
 export interface ExportOptions {
-  inputPath: string;   // absolute path to source video
-  outputName: string;  // filename without extension
-  startTime: number;   // seconds
-  duration: number;    // seconds
+  inputPath: string;
+  outputName: string;
+  startTime: number;
+  duration: number;
   aspectRatio: '9:16' | '16:9' | '1:1';
   quality?: '720p' | '1080p';
 }
@@ -28,21 +40,15 @@ export function exportClip(opts: ExportOptions): Promise<string> {
     const outputPath = path.join(EXPORTS_DIR, `${opts.outputName}.mp4`);
 
     const height = opts.quality === '1080p' ? 1080 : 720;
-    const width  =
+    const width =
       opts.aspectRatio === '9:16' ? Math.round(height * 9 / 16) :
       opts.aspectRatio === '1:1'  ? height :
       Math.round(height * 16 / 9);
 
-    // Ensure width is even (FFmpeg requirement)
     const w = width  % 2 === 0 ? width  : width  + 1;
     const h = height % 2 === 0 ? height : height + 1;
 
-    const videoFilter =
-      opts.aspectRatio === '9:16'
-        ? `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2`
-        : opts.aspectRatio === '1:1'
-        ? `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2`
-        : `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2`;
+    const videoFilter = `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2`;
 
     ffmpeg(opts.inputPath)
       .setStartTime(opts.startTime)
