@@ -42,7 +42,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           title,
           url: blob.url,
           duration: 0,
-          size: blob.size,
+          size: 0,
           status: 'ready',
           progress: 100,
           projectId,
