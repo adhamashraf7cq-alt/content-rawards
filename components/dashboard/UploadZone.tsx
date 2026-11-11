@@ -81,14 +81,9 @@ export function UploadZone({ onVideoCreated }: Props) {
           const res = await fetch('/api/videos/upload', { method: 'POST', body: form });
           const data = await res.json();
           video = data.video as Video;
-        } catch {
-          // Fallback to direct upload for small files
-          const form = new FormData();
-          form.append('file', file);
-          video = await uploadWithProgress(form, (pct) => {
-            setProgress(Math.round(pct * 0.65));
-            setStatusLabel(`Uploading… ${Math.round(pct)}%`);
-          });
+        } catch (blobErr) {
+          // Show real error instead of falling back to direct upload (which hits 413)
+          throw new Error(blobErr instanceof Error ? blobErr.message : 'Upload failed. Please try again.');
         }
       } else {
         const form = new FormData();
