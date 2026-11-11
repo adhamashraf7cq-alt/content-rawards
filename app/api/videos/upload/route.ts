@@ -60,10 +60,9 @@ export async function POST(req: NextRequest) {
           url: blobUrl,
           duration: 0,
           size: fileSize ? Number(fileSize) : 0,
-          status: 'processing', progress: 60,
+          status: 'ready', progress: 100,
           projectId: resolvedProjectId, createdAt: now, updatedAt: now,
         });
-        void runProcessingBackground(video.id);
         return NextResponse.json({ video });
       }
 

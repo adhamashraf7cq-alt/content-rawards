@@ -34,33 +34,15 @@ export function UploadZone({ onVideoCreated }: Props) {
   useEffect(() => {
     if (!pollingId) return;
 
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/videos?id=${pollingId}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const v: Video = data.video;
+    // On Vercel, video is already ready -- go straight to workspace
+    setProgress(100);
+    setStatusLabel('Ready!');
+    setTimeout(() => {
+      setUploading(false);
+      setPollingId(null);
+    }, 1000);
 
-        setProgress(v.progress ?? 0);
-        setStatusLabel(STATUS_LABEL[v.status] ?? 'Processing…');
-
-        if (v.status === 'ready') {
-          clearInterval(pollRef.current!);
-          setPollingId(null);
-          setUploading(false);
-          onVideoCreated(v);
-        } else if (v.status === 'error') {
-          clearInterval(pollRef.current!);
-          setPollingId(null);
-          setUploading(false);
-          setError('Processing failed. Please try again.');
-        }
-      } catch {
-        // ignore transient errors
-      }
-    }, 2000);
-
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {};
   }, [pollingId, onVideoCreated]);
 
   async function upload(file: File) {
@@ -118,7 +100,17 @@ export function UploadZone({ onVideoCreated }: Props) {
 
       setProgress(90);
       setStatusLabel('Processing…');
-      setPollingId(video.id);
+      // On Vercel: video is ready immediately after blob upload
+      if (video.status === 'ready') {
+        setProgress(100);
+        setStatusLabel('Ready!');
+        setTimeout(() => {
+          setUploading(false);
+          onVideoCreated(video);
+        }, 800);
+      } else {
+        setPollingId(video.id);
+      }
     } catch (err: unknown) {
       setUploading(false);
       setError(err instanceof Error ? err.message : 'Upload failed. Please try again.');
